@@ -31,8 +31,7 @@ public class CustomerRepository {
 
     @Transactional
     public Customer getCustomer(long id) {
-        return (Customer) entityManager.createQuery("SELECT c FROM Customer c WHERE c.id = ?1").setParameter(1, id)
-                .getSingleResult();
+        return entityManager.find(Customer.class, id);
     }
 
 }

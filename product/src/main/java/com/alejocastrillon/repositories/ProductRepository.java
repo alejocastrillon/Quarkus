@@ -29,4 +29,8 @@ public class ProductRepository {
         em.remove(product);
     }
 
+    public Product getProductById(long id) {
+        return em.find(Product.class, id);
+    }
+
 }

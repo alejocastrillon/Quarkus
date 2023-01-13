@@ -4,11 +4,7 @@ import com.alejocastrillon.entities.Product;
 import com.alejocastrillon.repositories.ProductRepository;
 import lombok.AllArgsConstructor;
 
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
@@ -30,9 +26,16 @@ public class ProductController {
         return Response.ok().build();
     }
 
+    @GET
+    @Path("/{id}")
+    public Product getProductById(@PathParam("id") long id) {
+        return productRepository.getProductById(id);
+    }
+
     @DELETE
-    public Response delete(Product product) {
-        productRepository.deleteProduct(product);
+    @Path("/{id}")
+    public Response delete(@PathParam("id") long id) {
+        productRepository.deleteProduct(productRepository.getProductById(id));
         return Response.ok().build();
     }
 }
