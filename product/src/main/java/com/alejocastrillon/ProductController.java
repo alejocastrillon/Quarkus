@@ -17,25 +17,25 @@ public class ProductController {
 
     @GET
     public List<Product> hello() {
-        return productRepository.getProducts();
+        return productRepository.findAll();
     }
 
     @POST
     public Response add(Product product) {
-        productRepository.createdProduct(product);
+        productRepository.save(product);
         return Response.ok().build();
     }
 
     @GET
     @Path("/{id}")
     public Product getProductById(@PathParam("id") long id) {
-        return productRepository.getProductById(id);
+        return productRepository.findById(id).orElseThrow(() -> new NotFoundException());
     }
 
     @DELETE
     @Path("/{id}")
     public Response delete(@PathParam("id") long id) {
-        productRepository.deleteProduct(productRepository.getProductById(id));
+        productRepository.delete(getProductById(id));
         return Response.ok().build();
     }
 }

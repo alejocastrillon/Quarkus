@@ -1,6 +1,7 @@
 package com.alejocastrillon.entities;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,8 +16,8 @@ import java.util.List;
 public class Customer {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private long id;
+    @GeneratedValue
+    private Long id;
 
     private String code;
 

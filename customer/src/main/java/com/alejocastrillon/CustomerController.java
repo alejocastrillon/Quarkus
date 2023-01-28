@@ -2,16 +2,19 @@ package com.alejocastrillon;
 
 import com.alejocastrillon.entities.Customer;
 import com.alejocastrillon.entities.Product;
+import com.alejocastrillon.repositories.CustomerPanacheRepository;
 import com.alejocastrillon.repositories.CustomerRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quarkus.hibernate.reactive.panache.Panache;
+import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
+import io.quarkus.panache.common.Sort;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.mutiny.core.Vertx;
 import io.vertx.mutiny.ext.web.client.WebClient;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.PostConstruct;
@@ -29,6 +32,9 @@ public class CustomerController {
     private CustomerRepository repository;
 
     @Inject
+    private CustomerPanacheRepository panacheRepository;
+
+    @Inject
     private Vertx vertx;
 
     private WebClient webClient;
@@ -40,65 +46,40 @@ public class CustomerController {
     }
 
     @POST
-    public Response add(Customer customer) {
+    public Uni<Customer> add(Customer customer) {
         customer.getProducts().forEach(p -> p.setCustomer(customer));
-        repository.createCustomer(customer);
-        return Response.ok().build();
+        return panacheRepository.persist(customer);
     }
 
     @GET
-    public Response getCustomers() {
-        return Response.ok(repository.getCustomers()).build();
+    public Uni<List<Customer>> getCustomers() {
+        return panacheRepository.listCustomers();
     }
 
     @GET
     @Path("/{id}")
-    @Blocking
     public Uni<Customer> getByIdProduct(@PathParam("id") long id) {
-        return Uni.combine().all().unis(getCustomerReactive(id), getProductsByCustomer())
-                .combinedWith((customer, products) -> {
-                    customer.getProducts().forEach(p -> {
-                        Product product = products.stream().filter(pro -> pro.getId() == p.getProduct()).findFirst()
-                                .get();
-                        p.setName(product.getName());
-                        p.setDescription(product.getDescription());
-                    });
-                    return customer;
-                });
+        return panacheRepository.getByIdProduct(id);
     }
 
     @DELETE
-    public Response deleteCustomer(@QueryParam("id") int id) {
-        Customer customer = repository.getCustomer(id);
-        if (customer != null) {
-            repository.deleteCustomer(customer);
-            return Response.ok().build();
-        }
-        return Response.status(Response.Status.NOT_FOUND).build();
+    public Uni<Response> deleteCustomer(@QueryParam("id") int id) {
+        return panacheRepository.deleteCustomer(id).map(isDeleted -> isDeleted ? Response.status(Response.Status
+                .NO_CONTENT).build() : Response.status(Response.Status.NOT_FOUND).build());
     }
 
-    private Uni<Customer> getCustomerReactive(long id) {
-        Customer customer = repository.getCustomer(id);
-        return Uni.createFrom().item(customer);
+    @GET
+    @Path("/products-graphql")
+    @Blocking
+    public List<Product> getProductsGraphQl() throws Exception {
+        return repository.getProductsGraphQl();
     }
 
-    private Uni<List<Product>> getProductsByCustomer() {
-        return webClient.get(8081, "localhost", "/product").send().onFailure()
-                .invoke(err -> log.error("Error: {}", err)).onItem().transform(res -> {
-                    List<Product> products = new ArrayList<>();
-                    JsonArray objects = res.bodyAsJsonArray();
-                    objects.forEach(p -> {
-                        log.info("Analizando objecto {}", p);
-                        ObjectMapper mapper = new ObjectMapper();
-                        Product product = null;
-                        try {
-                            product = mapper.readValue(p.toString(), Product.class);
-                        } catch (JsonProcessingException e) {
-                            throw new RuntimeException(e);
-                        }
-                        products.add(product);
-                    });
-                    return products;
-                });
+    @GET
+    @Path("/product-graphql/{id}")
+    @Blocking
+    public Product getProductGraphQl(@PathParam("id") long id) throws Exception {
+        return repository.getProductGraphQl(id);
     }
+
 }
